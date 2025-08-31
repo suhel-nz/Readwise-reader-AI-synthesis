@@ -5,8 +5,7 @@ import numpy as np
 import pandas as pd
 import sys
 import os
-
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from datetime import datetime
 from utils import database, llm_processor
 from config import DEFAULT_EMBEDDING_MODEL
 
@@ -82,11 +81,19 @@ if 'search_results' in st.session_state and st.session_state.search_results:
 
     for result in results:
         relevance_score = f"{result['relevance']:.2%}"
+
+        # --- FIX: Parse string date before formatting ---
+        date_val = result['date']
+        if isinstance(date_val, str):
+            dt_obj = datetime.fromisoformat(date_val)
+        else:
+            dt_obj = date_val
+
         expander_title = f"**[{result['type']}]** {result['content'].splitlines()[0]} (Relevance: {relevance_score})"
         
         with st.expander(expander_title):
             st.markdown(f"**Relevance Score:** {relevance_score}")
-            st.markdown(f"**Date:** {result['date'].strftime('%Y-%m-%d')}")
+            st.markdown(f"**Date:** {dt_obj.strftime('%Y-%m-%d')}")
             st.markdown("---")
             st.markdown(result['content'], unsafe_allow_html=True)
 

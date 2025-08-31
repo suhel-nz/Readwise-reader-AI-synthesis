@@ -8,42 +8,46 @@ DB_PATH = os.path.join(BASE_DIR, "newsletter_app.db")
 LOG_DIR = os.path.join(BASE_DIR, "logs")
 HTML_CACHE_DIR = os.path.join(BASE_DIR, "html_cache")
 
+# --- API Rate Limit Configuration ---
+READWISE_RPM = 20  # Readwise has a limit of 20 requests per minute
+
+# Define limits for various LLM providers.
+# These are examples and should be verified against the provider's official documentation.
+# RPD = Requests Per Day, RPM = Requests Per Minute, TPM = Tokens Per Minute
+LLM_PROVIDER_LIMITS = {
+    "gemini/gemini-2.5-flash-lite": {"rpd": 1000, "rpm": 14, "tpm": 250000},
+    "gemini/gemini-2.5-flash": {"rpd": 250, "rpm": 9, "tpm": 250000},    
+    "gemini/gemini-2.5-pro": {"rpd": 100, "rpm": 4, "tpm": 250000},
+    "gemini/text-embedding-004": {"rpd": 1000, "rpm": 90, "tpm": 30000},
+    "gpt-4o": {"rpd": 20, "rpm": 5, "tpm": 100000},
+    "gpt-5": {"rpd": 20, "rpm": 5, "tpm": 100000},    
+    "claude-sonnet-4-20250514": {"rpd": 20, "rpm": 5, "tpm": 40000}, # Example, check Anthropic docs
+    "claude-opus-4-20250514": {"rpd": 10, "rpm": 5, "tpm": 20000},  # Example
+    "deepseek/deepseek-chat": {"rpd": 50, "rpm": 10, "tpm": 100000},
+    # Default values for any model not explicitly listed
+    "default": {"rpd": 50, "rpm": 5, "tpm": 40000}
+}
+
+
 # --- LLM Model Configuration ---
-# Default models for each step. These can be overridden in the Streamlit UI.
-# Ensure you have the corresponding API keys in .streamlit/secrets.toml for the models you use.
-DEFAULT_TAGGING_MODEL = "gemini/gemini-2.5-flash"
-DEFAULT_REFINEMENT_MODEL = "gemini/gemini-2.5-flash"
-DEFAULT_NAMING_MODEL = "gemini/gemini-2.5-flash"
-DEFAULT_SUMMARY_MODEL = "gemini/gemini-2.5-pro" # A more powerful model for the final summary
-DEFAULT_EMBEDDING_MODEL = "text-embedding-004" # Google's embedding model
+DEFAULT_TAGGING_MODEL = "gemini/gemini-2.5-flash-lite"
+DEFAULT_REFINEMENT_MODEL = "gemini/gemini-2.5-flash-lite"
+DEFAULT_NAMING_MODEL = "gemini/gemini-2.5-flash-lite"
+DEFAULT_SUMMARY_MODEL = "gemini/gemini-2.5-flash-lite"
+DEFAULT_EMBEDDING_MODEL = "gemini/text-embedding-004" # gemini/text-embedding-004
 
-# List of available models for the user to select from in the UI
-AVAILABLE_MODELS = [
-    "gemini/gemini-2.5-flash",
-    "gemini/gemini-2.5-pro",
-    "gpt-4o",
-    "gpt-5",    
-    "claude-sonnet-4-20250514",
-    "claude-opus-4-20250514",
-    "deepseek/deepseek-chat",
-]
+AVAILABLE_MODELS = list(LLM_PROVIDER_LIMITS.keys())
+if "default" in AVAILABLE_MODELS: AVAILABLE_MODELS.remove("default")
 
-AVAILABLE_EMBEDDING_MODELS = [
-    "text-embedding-004", # Google
-    "text-embedding-3-small", # OpenAI
-    "text-embedding-3-large", # OpenAI
-]
+AVAILABLE_EMBEDDING_MODELS = [ "gemini/text-embedding-004", "text-embedding-3-small", "text-embedding-3-large", ]
 
 # --- Readwise API Configuration ---
 READWISE_API_BASE_URL = "https://readwise.io/api/v3/list/"
-# Categories of content to fetch from Readwise
 READWISE_CATEGORIES = ["article", "email", "rss", "feed"]
 
 # --- K-Means Clustering Configuration ---
-# Number of themes to identify. 'auto' will try to find the optimal number.
-# You can set it to a fixed integer like 5.
-K_CLUSTERS = 'auto' # or an integer e.g., 5
-K_CLUSTERS_MAX = 10 # Max clusters to test if K_CLUSTERS is 'auto'
+K_CLUSTERS = 'auto'
+K_CLUSTERS_MAX = 10
 
 # --- UI Configuration ---
-PAGINATION_LIMIT = 20 # Number of items per page in tables
+PAGINATION_LIMIT = 20

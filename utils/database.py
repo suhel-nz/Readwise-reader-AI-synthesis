@@ -4,7 +4,7 @@ import sqlite3
 import json
 import numpy as np
 import io
-from datetime import datetime
+from datetime import datetime, date
 import config # Use relative import
 from utils.logger import get_logger
 
@@ -21,7 +21,7 @@ def adapt_array(arr):
 def convert_array(text):
     out = io.BytesIO(text)
     out.seek(0)
-    return np.load(out)
+    return np.load(out, allow_pickle=True)
 
 # Converts np.array to TEXT when inserting
 sqlite3.register_adapter(np.ndarray, adapt_array)
@@ -109,9 +109,60 @@ def create_tables():
                 metadata TEXT
             );
             ''')
+            # --- NEW: Daily Usage Stats Table ---
+            conn.execute('''
+            CREATE TABLE IF NOT EXISTS daily_usage_stats (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                usage_date DATE NOT NULL,
+                model TEXT NOT NULL,
+                call_count INTEGER NOT NULL DEFAULT 0,
+                token_count INTEGER NOT NULL DEFAULT 0,
+                UNIQUE(usage_date, model)
+            );
+            ''')
         logger.info("Database tables verified/created successfully.")
     except sqlite3.Error as e:
         logger.error(f"Error creating tables: {e}")
+    finally:
+        conn.close()
+
+# --- NEW: Daily Usage Functions ---
+def get_daily_usage(model: str, usage_date: date = None) -> tuple[int, int]:
+    """Retrieves the current call and token count for a given model for a specific date."""
+    if usage_date is None:
+        usage_date = date.today()
+    
+    conn = get_db_connection()
+    if not conn: return (0, 0)
+    try:
+        cursor = conn.execute(
+            "SELECT call_count, token_count FROM daily_usage_stats WHERE usage_date = ? AND model = ?",
+            (usage_date, model)
+        )
+        row = cursor.fetchone()
+        return (row['call_count'], row['token_count']) if row else (0, 0)
+    finally:
+        conn.close()
+
+def update_daily_usage(model: str, calls_to_add: int, tokens_to_add: int, usage_date: date = None):
+    """Atomically increments the call and token counts for a given model for a specific date."""
+    if usage_date is None:
+        usage_date = date.today()
+
+    conn = get_db_connection()
+    if not conn: return
+    try:
+        with conn:
+            conn.execute("""
+                INSERT INTO daily_usage_stats (usage_date, model, call_count, token_count)
+                VALUES (?, ?, ?, ?)
+                ON CONFLICT(usage_date, model) DO UPDATE SET
+                    call_count = call_count + excluded.call_count,
+                    token_count = token_count + excluded.token_count
+            """, (usage_date, model, calls_to_add, tokens_to_add))
+        logger.info(f"Updated daily usage for {model}: +{calls_to_add} calls, +{tokens_to_add} tokens.")
+    except sqlite3.Error as e:
+        logger.error(f"Failed to update daily usage for {model}: {e}")
     finally:
         conn.close()
 
@@ -233,10 +284,16 @@ def get_latest_article_date():
         cursor = conn.execute('SELECT MAX(published_date) FROM newsletters')
         result = cursor.fetchone()[0]
         if result:
-            return datetime.fromisoformat(result)
+            # --- FIX: Handle both string and datetime object cases robustly ---
+            if isinstance(result, str):
+                return datetime.fromisoformat(result)
+            # If it's already a datetime object (some drivers might do this)
+            elif isinstance(result, datetime):
+                return result
         return None
     finally:
-        conn.close()
+        if conn:
+            conn.close()
 
 # Generic fetch function for pagination
 def fetch_paginated_data(query, params=(), page=1, page_size=20):

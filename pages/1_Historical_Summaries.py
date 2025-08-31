@@ -5,8 +5,6 @@ import pandas as pd
 from datetime import datetime, timedelta
 import sys
 import os
-
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from utils import database
 from config import PAGINATION_LIMIT
 
@@ -56,7 +54,19 @@ else:
     st.write(f"Showing {len(data)} of {total_items} summaries.")
 
     for row in data:
-        with st.expander(f"**Summary ID: {row['id']}** - Generated on {row['generated_date'].strftime('%Y-%m-%d %H:%M')} - ({row['newsletter_count']} articles)"):
+         # --- FIX: Parse string date before formatting ---
+        generated_date_val = row['generated_date']
+        if isinstance(generated_date_val, str):
+            generated_dt = datetime.fromisoformat(generated_date_val)
+        else:
+            generated_dt = generated_date_val
+            
+        expander_title = (
+            f"**Summary ID: {row['id']}** - "
+            f"Generated on {generated_dt.strftime('%Y-%m-%d %H:%M')} - "
+            f"({row['newsletter_count']} articles)"
+        )
+        with st.expander(expander_title):
             st.markdown(row['content'], unsafe_allow_html=True)
 
     # Pagination controls
