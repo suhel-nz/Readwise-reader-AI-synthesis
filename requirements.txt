@@ -6,3 +6,7 @@ scikit-learn
 numpy
 pandas
 pyvis
+python-dotenv
+aiohttp
+wordcloud
+matplotlib

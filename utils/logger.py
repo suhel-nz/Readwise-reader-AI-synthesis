@@ -27,8 +27,8 @@ def setup_logger(run_timestamp):
         level=logging.INFO,
         format='%(asctime)s - %(levelname)s - %(module)s - %(message)s',
         handlers=[
-            logging.FileHandler(log_file_path),
-            logging.StreamHandler() # Also log to console
+            logging.FileHandler(log_file_path, encoding='utf-8'), # MODIFIED: Specify UTF-8 encoding
+            logging.StreamHandler() # Also log to console. The console usually handles unicode fine.
         ]
     )
     logging.info(f"Logger initialized. Log file: {log_file_path}")

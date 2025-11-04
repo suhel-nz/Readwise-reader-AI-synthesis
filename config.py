@@ -15,10 +15,10 @@ READWISE_RPM = 20  # Readwise has a limit of 20 requests per minute
 # These are examples and should be verified against the provider's official documentation.
 # RPD = Requests Per Day, RPM = Requests Per Minute, TPM = Tokens Per Minute
 LLM_PROVIDER_LIMITS = {
-    "gemini/gemini-2.5-flash-lite": {"rpd": 1000, "rpm": 14, "tpm": 250000},
-    "gemini/gemini-2.5-flash": {"rpd": 250, "rpm": 9, "tpm": 250000},    
-    "gemini/gemini-2.5-pro": {"rpd": 100, "rpm": 4, "tpm": 250000},
-    "gemini/text-embedding-004": {"rpd": 1000, "rpm": 90, "tpm": 30000},
+    "gemini/gemini-2.5-flash-lite": {"rpd": 5000, "rpm": 1000, "tpm": 4000000},
+    "gemini/gemini-2.5-flash": {"rpd": 500, "rpm": 500, "tpm": 1000000},    
+    "gemini/gemini-2.5-pro": {"rpd": 500, "rpm": 50, "tpm": 2000000},
+    "gemini/text-embedding-004": {"rpd": 3000, "rpm": 1000, "tpm": 1000000},
     "gpt-4o": {"rpd": 20, "rpm": 5, "tpm": 100000},
     "gpt-5": {"rpd": 20, "rpm": 5, "tpm": 100000},    
     "claude-sonnet-4-20250514": {"rpd": 20, "rpm": 5, "tpm": 40000}, # Example, check Anthropic docs
@@ -33,7 +33,7 @@ LLM_PROVIDER_LIMITS = {
 DEFAULT_TAGGING_MODEL = "gemini/gemini-2.5-flash-lite"
 DEFAULT_REFINEMENT_MODEL = "gemini/gemini-2.5-flash-lite"
 DEFAULT_NAMING_MODEL = "gemini/gemini-2.5-flash-lite"
-DEFAULT_SUMMARY_MODEL = "gemini/gemini-2.5-flash-lite"
+DEFAULT_SUMMARY_MODEL = "gemini/gemini-2.5-flash"
 DEFAULT_EMBEDDING_MODEL = "gemini/text-embedding-004" # gemini/text-embedding-004
 
 AVAILABLE_MODELS = list(LLM_PROVIDER_LIMITS.keys())

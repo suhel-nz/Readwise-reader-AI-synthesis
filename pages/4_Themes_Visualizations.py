@@ -62,4 +62,4 @@ else:
     # --- Theme Data Table ---
     st.divider()
     st.subheader("All Identified Themes")
-    st.dataframe(theme_df.sort_values(by="frequency", ascending=False), use_container_width=True)
+    st.dataframe(theme_df.sort_values(by="frequency", ascending=False), width="stretch")

@@ -9,6 +9,7 @@ import config
 from utils.logger import get_logger
 from utils.rate_limiter import RateLimiter # NEW
 
+
 logger = get_logger()
 # NEW: Instantiate a rate limiter for the Readwise API
 readwise_limiter = RateLimiter(rpm=config.READWISE_RPM)
@@ -25,11 +26,18 @@ def fetch_readwise_articles(updated_after, updated_before, status_callback):
     Returns:
         list: A list of article dictionaries, or None if an error occurs.
     """
-    try:
-        api_key = st.secrets["READWISE_API_KEY"]
-    except (FileNotFoundError, KeyError):
-        st.error("Readwise API key not found. Please set it in .streamlit/secrets.toml")
-        logger.error("READWISE_API_KEY not found in Streamlit secrets.")
+    # This function now has two modes of getting the API key.
+    # It tries Streamlit secrets first, for when it's called from the UI (less common now).
+    # It falls back to environment variables for when it's called from run_ingestion.py.
+    api_key = st.secrets.get("READWISE_API_KEY") or os.environ.get("READWISE_API_KEY")
+    if not api_key:
+        error_msg = "Readwise API key not found. Please set it in .streamlit/secrets.toml or as an environment variable."
+        logger.error(error_msg)
+        # Avoid st.error if not in a Streamlit context
+        if 'streamlit' in globals():
+            st.error(error_msg)
+        else:
+            print(f"ERROR: {error_msg}")
         return None
 
     headers = {"Authorization": f"Token {api_key}"}
@@ -52,6 +60,8 @@ def fetch_readwise_articles(updated_after, updated_before, status_callback):
         # --- NEW: Rate limiting and retry logic ---
         max_retries = 5
         backoff_factor = 2
+        data = None # Initialize data to None
+
         for attempt in range(max_retries):
             readwise_limiter.wait() # Wait before making the call
             
@@ -59,8 +69,7 @@ def fetch_readwise_articles(updated_after, updated_before, status_callback):
             try:
                 response = requests.get(config.READWISE_API_BASE_URL, headers=headers, params=params)
                 response.raise_for_status()
-                data = response.json()
-                
+                data = response.json()                
                 # Success, break the retry loop
                 break 
 
@@ -78,14 +87,24 @@ def fetch_readwise_articles(updated_after, updated_before, status_callback):
                 logger.error(f"Request Error fetching from Readwise: {e}")
                 st.error(f"A network error occurred while contacting Readwise.")
                 return None # Network error
-        else: # This else belongs to the for loop, runs if loop completes without break
-            st.error("Failed to fetch from Readwise after multiple retries.")
+        
+        if data is None: # If all retries failed
+            logger.error("Failed to fetch from Readwise after multiple retries.")
             return None
-        # --- End of new logic ---
 
         articles_on_page = data.get("results", [])
-        all_articles.extend(articles_on_page)
-        logger.info(f"Fetched {len(articles_on_page)} articles on page {page_count}. Total: {len(all_articles)}.")
+        logger.info(f"Fetched {len(articles_on_page)} articles from page {page_count}.")        
+        
+        # --- CORRECTED LOGIC: Filter before extending ---
+        original_count = len(articles_on_page)
+        filtered_articles = [doc for doc in articles_on_page if doc.get("parent_id") is None]
+        filtered_count = len(filtered_articles)
+        
+        if original_count != filtered_count:
+            logger.info(f"Filtered out {original_count - filtered_count} items (highlights/notes) with a parent_id.")
+        
+        # --- CORRECTED LOGIC: Extend the list only ONCE with filtered results ---
+        all_articles.extend(filtered_articles)
 
         page_cursor = data.get("nextPageCursor")
         if not page_cursor:
@@ -98,7 +117,7 @@ def fetch_readwise_articles(updated_after, updated_before, status_callback):
     # Save HTML content to local cache
     for article in all_articles:
         html_content = article.get('html_content', '')
-        if html_content:
+        if html_content and 'id' in article:
             file_path = os.path.join(config.HTML_CACHE_DIR, f"{article['id']}.html")
             logger.info(f"Start caching HTML for article {article['id']}.")
             try:

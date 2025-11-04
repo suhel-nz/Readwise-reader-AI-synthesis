@@ -88,7 +88,7 @@ st.subheader("Call Details")
 if paginated_df.empty:
     st.info("No LLM calls found matching your criteria.")
 else:
-    st.dataframe(paginated_df, use_container_width=True)
+    st.dataframe(paginated_df, width="stretch")
 
     # Pagination controls
     page_col1, page_col2, page_col3 = st.columns([1, 2, 1])
