@@ -1,3 +1,7 @@
+# Update 2026 May - this is all entirely possible directly from Codex app via the Readwise Plugin. What a time to be alive!
+
+---
+
 # Newsletter Synthesis AI
 
 ## 1. The Vision: My Personal Knowledge AI
